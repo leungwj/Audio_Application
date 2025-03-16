@@ -19,7 +19,7 @@ export async function getSession() {
 
 export async function createSession(access_token: string) {
     try {
-        const expiresAt = new Date(Date.now() + 30 * 60 * 1000)
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
 
         const cookieStore = await cookies();
     

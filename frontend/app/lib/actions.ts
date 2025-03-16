@@ -13,7 +13,7 @@ export async function authenticate(  prevState: string | undefined, formData: Fo
         }).toString();
 
         // Step 2: Submit form data to backend server
-        const response = await fetch(`http://localhost:8000/token`, {
+        const response = await fetch(`${process.env.API_SERVER}/token`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -27,18 +27,15 @@ export async function authenticate(  prevState: string | undefined, formData: Fo
             return response_data.detail;
         }
 
-        // TODO: Set cookie with token details
         const success = await createSession(response_data.access_token);
 
         if (!success) {
             return "Error creating session. Please try again.";
         }
-        
-        console.log(response_data);
 
     } catch (error) {
         console.error("Error logging in:", error);
-        return error;
+        return "Error logging in. Please try again.";
     }
 
     if (redirectTo) {
@@ -59,7 +56,7 @@ export async function register(  prevState: string | undefined, formData: FormDa
         }).toString();
 
         // Step 2: Submit form data to backend server
-        const response = await fetch(`http://localhost:8000/users/`, {
+        const response = await fetch(`${process.env.API_SERVER}/users/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -72,12 +69,10 @@ export async function register(  prevState: string | undefined, formData: FormDa
         if (!response.ok) {
             return response_data.detail;
         }
-        
-        console.log(response_data);
 
     } catch (error) {
         console.error("Error signing up:", error);
-        return error;
+        return "Error signing up. Please try again.";
     }
 
     if (redirectTo) {
