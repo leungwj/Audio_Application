@@ -7,7 +7,7 @@ volumes:
     driver: local
 
 services:
-  # FastAPI server
+  # API Server (FastAPI)
   backend:
     build:
       context: ./backend
@@ -31,6 +31,7 @@ services:
     depends_on:
       - db
 
+  # Frontend (Next.js + React)
   frontend:
     build:
       context: ./frontend
@@ -45,6 +46,7 @@ services:
     depends_on:
       - backend
 
+  # Database (PostgreSQL)
   db:
     image: postgres:17-alpine
     restart: always
@@ -57,11 +59,12 @@ services:
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
   
-  adminer:
-    image: adminer
-    restart: always
-    container_name: adminer
-    ports:
-    - 8080:8080
-    networks:
-      - intranet
+  # For debugging purposes
+  # adminer:
+  #   image: adminer
+  #   restart: always
+  #   container_name: adminer
+  #   ports:
+  #   - 8080:8080
+  #   networks:
+  #     - intranet
