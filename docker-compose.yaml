@@ -31,19 +31,19 @@ services:
     depends_on:
       - db
 
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #     args:
-  #       - API_SERVER=${API_SERVER}
-  #   container_name: frontend
-  #   ports:
-  #     - 3000:3000
-  #   networks:
-  #     - intranet
-  #   depends_on:
-  #     - backend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - API_SERVER=${API_SERVER}
+    container_name: frontend
+    ports:
+      - 3000:3000
+    networks:
+      - intranet
+    depends_on:
+      - backend
 
   db:
     image: postgres:17-alpine
