@@ -68,9 +68,7 @@ async def login_for_access_token(
             headers = {"WWW-Authenticate": "Bearer"}
         )
 
-# TODO: Implement get_all_users route
-
-@router.get("/", status_code=status.HTTP_200_OK)
+@router.get("/me", status_code=status.HTTP_200_OK)
 async def get_current_user(
     response: Response,
     session: Annotated[Session, Depends(get_session)],
@@ -86,9 +84,43 @@ async def get_current_user(
         session=session
     )
 
+@router.get("/{id}", status_code=status.HTTP_200_OK)
+async def get_user(
+    id: UUID,
+    response: Response,
+    session: Annotated[Session, Depends(get_session)],
+    token: Annotated[str, Depends(oauth2_scheme)]
+):
+    user_id = decode_access_token(token)
+
+    return await BaseRouter.retrieve(
+        id=id,
+        cls=User,
+        scheme=UserScheme,
+        response=response,
+        session=session
+    )
+
+# TODO: Implement get_all_users route
+@router.get("/", status_code=status.HTTP_200_OK)
+async def get_all_user(
+    response: Response,
+    session: Annotated[Session, Depends(get_session)],
+    token: Annotated[str, Depends(oauth2_scheme)]
+):
+    user_id = decode_access_token(token)
+
+    return await BaseRouter.retrieve_all(
+        cls=User,
+        scheme=UserScheme,
+        response=response,
+        session=session
+    )
+
 # put wildcard routes last
-@router.put("/", status_code=status.HTTP_202_ACCEPTED)
+@router.put("/{id}", status_code=status.HTTP_202_ACCEPTED)
 async def update_user(
+    id: UUID,
     username: Annotated[str, Form()],
     email: Annotated[str, Form()],
     full_name: Annotated[str, Form()],
@@ -99,7 +131,7 @@ async def update_user(
     user_id = decode_access_token(token)
 
     return await BaseRouter.update(
-        id=UUID(user_id),
+        id=id,
         cls=User,
         fields={
             "username": username,
@@ -111,8 +143,9 @@ async def update_user(
         validate=validate_user
     )
 
-@router.delete("/", status_code=status.HTTP_202_ACCEPTED)
+@router.delete("/{id}", status_code=status.HTTP_202_ACCEPTED)
 async def delete_user(
+    id: UUID,
     response: Response,
     session: Annotated[Session, Depends(get_session)],
     token: Annotated[str, Depends(oauth2_scheme)]
@@ -120,7 +153,7 @@ async def delete_user(
     user_id = decode_access_token(token)
 
     return await BaseRouter.delete(
-        id=UUID(user_id),
+        id=id,
         cls=User,
         response=response,
         session=session

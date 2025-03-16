@@ -22,7 +22,6 @@ from azure.storage.blob import generate_blob_sas, BlobSasPermissions
 from uuid import UUID
 import uuid
 from sqlalchemy import and_
-from mimetypes import guess_extension
 
 router = APIRouter(
     prefix="/audio_files",
@@ -58,13 +57,12 @@ async def generate_sas_blob_url(
             raise Exception("You do not have permission to access this audio file")
 
         # generate a SAS URL for the audio file
-        success, res = await generate_sas_blob_url(blob_name=str(audio_file.blob_name), content_type=audio_file.content_type)
+        success, res = await generate_sas_blob_url(blob_name=str(audio_file.blob_name), extension=audio_file.extension)
 
         if not success:
             raise Exception(res.get("error"))
 
         return {
-            "audio_id": id,
             "audio_url": res.get("audio_url")
         }
     
@@ -92,14 +90,14 @@ async def upload_audio_file(
             raise Exception(res.get("error"))
         
         blob_name = res.get("blob_name")
-        content_type = res.get("content_type")
+        extension = res.get("extension")
 
         audio_file = Audio_File(
             user_id=UUID(user_id),
             description=description,
             category=category,
             blob_name=UUID(blob_name),
-            content_type=content_type
+            extension=extension
         )
 
         success, res = Postgres_DB.insert(session=session, obj=audio_file)
@@ -151,39 +149,43 @@ async def retrieve_all_audio_files(
 async def upload_file_to_bucket(
     audio_file: UploadFile
 ) -> Tuple[bool, Dict[str, Any]]:
-    file_ext = os.path.splitext(audio_file.filename)[1]
-    blob_name = str(uuid.uuid4())
-    blob_name_with_ext = f"{blob_name}{file_ext}"
-    content_type = audio_file.content_type
+    try:
+        extension = os.path.splitext(audio_file.filename)[1]
+        blob_name = str(uuid.uuid4())
+        blob_name_with_ext = f"{blob_name}{extension}"
 
-    # https://learn.microsoft.com/en-us/dotnet/api/azure.storage.blobs.blobserviceclient.-ctor?view=azure-dotnet#azure-storage-blobs-blobserviceclient-ctor(system-string)
-    blob_service_client = BlobServiceClient.from_connection_string(os.getenv("AZ_STORAGE_CONNECTION_STRING"))
+        content_type = audio_file.content_type
 
-    async with blob_service_client:
-        container_client: ContainerClient = blob_service_client.get_container_client(os.getenv("AZ_STORAGE_CONTAINER_NAME"))
-        try:
+        if not content_type.startswith("audio/"):
+            raise Exception("Invalid file type. Please upload an audio file")
+
+        # https://learn.microsoft.com/en-us/dotnet/api/azure.storage.blobs.blobserviceclient.-ctor?view=azure-dotnet#azure-storage-blobs-blobserviceclient-ctor(system-string)
+        blob_service_client = BlobServiceClient.from_connection_string(os.getenv("AZ_STORAGE_CONNECTION_STRING"))
+
+        async with blob_service_client:
+            container_client: ContainerClient = blob_service_client.get_container_client(os.getenv("AZ_STORAGE_CONTAINER_NAME"))
+            
             blob_client: BlobClient = container_client.get_blob_client(blob_name_with_ext)
             audio_data: bytes = await audio_file.read()
             await blob_client.upload_blob(audio_data)
-        except Exception as e:
-            return False, {
-                "error": str(e)
-            }
-        
-    return True, {
-        "blob_name": blob_name,
-        "content_type": content_type,
-    }
+            
+        return True, {
+            "blob_name": blob_name,
+            "extension": extension,
+        }
+    except Exception as e:
+        return False, {
+            "error": str(e)
+        }
 
 async def generate_sas_blob_url(
     blob_name: str,
-    content_type: str
+    extension: str
 ) -> Tuple[bool, Dict[str, Any]]:
     try:
         blob_service_client = BlobServiceClient.from_connection_string(os.getenv("AZ_STORAGE_CONNECTION_STRING"))
-
-        file_ext = guess_extension(content_type)
-        blob_name = blob_name if file_ext is None else blob_name + file_ext
+        print(extension)
+        blob_name = blob_name if extension is None else blob_name + extension
 
         async with blob_service_client:
             sas_token = generate_blob_sas(
@@ -192,7 +194,7 @@ async def generate_sas_blob_url(
                 blob_name=blob_name,
                 account_key=blob_service_client.credential.account_key,
                 permission=BlobSasPermissions(read=True),
-                expiry=datetime.now(timezone.utc)+ timedelta(minutes=float(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")))
+                expiry=datetime.now(timezone.utc)+ timedelta(minutes=0.5)
             )
 
             audio_url = f"https://{blob_service_client.account_name}.blob.core.windows.net/{os.getenv('AZ_STORAGE_CONTAINER_NAME')}/{blob_name}?{sas_token}"
