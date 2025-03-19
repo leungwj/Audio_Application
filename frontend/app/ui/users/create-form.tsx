@@ -120,7 +120,7 @@ export default function Form() {
             >
             Cancel
             </Link>
-            <Button type="submit" aria-disabled={isPending}>Create Invoice</Button>
+            <Button type="submit" aria-disabled={isPending}>Create User</Button>
         </div>
         </form>
     );
